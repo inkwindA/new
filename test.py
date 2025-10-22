@@ -13,7 +13,7 @@ arg_parser.add_argument('--checkpoint_path', type=str, default='checkpoint')
 # arg_parser.add_argument('--checkpoint', type=int, default=140)
 arg_parser.add_argument('--save_path', type=str, default='save/fig')
 arg_parser.add_argument('--start_checkpoint', type=int, default=0)
-arg_parser.add_argument('--end_checkpoint', type=int, default=80)
+arg_parser.add_argument('--end_checkpoint', type=int, default=20)
 arg_parser.add_argument('--precision_path', type=str, default='save/precision')
 arg_parser.add_argument('--batch_size', type=int, default=1)
 

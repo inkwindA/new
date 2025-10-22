@@ -62,7 +62,11 @@ class MultiFramePromptEncoder(nn.Module):
         self.num_frames = num_frames
         
         # 多帧特征提取
-        self.initial_conv = nn.Conv2d(num_frames, base_channels, 3, padding=1)
+        self.initial_conv = nn.Sequential(
+            nn.Conv2d(num_frames, base_channels, 3, padding=1),
+            nn.BatchNorm2d(base_channels),
+            nn.ReLU(inplace=True)
+        )
         self.enc1 = DoubleConv(base_channels, base_channels)
         self.down1 = Down(base_channels, base_channels * 2)
         self.enc2 = DoubleConv(base_channels * 2, base_channels * 2)
@@ -77,22 +81,27 @@ class MultiFramePromptEncoder(nn.Module):
         self.prompt_fusion = nn.ModuleDict({
             'level1': nn.Sequential(
                 nn.Conv2d(base_channels, base_channels // 4, 1),
+                nn.BatchNorm2d(base_channels // 4),
                 nn.ReLU(inplace=True)
             ),
             'level2': nn.Sequential(
                 nn.Conv2d(base_channels * 2, base_channels // 2, 1),
+                nn.BatchNorm2d(base_channels // 2),
                 nn.ReLU(inplace=True)
             ),
             'level3': nn.Sequential(
                 nn.Conv2d(base_channels * 4, base_channels, 1),
+                nn.BatchNorm2d(base_channels),
                 nn.ReLU(inplace=True)
             ),
             'level4': nn.Sequential(
                 nn.Conv2d(base_channels * 8, base_channels * 2, 1),
+                nn.BatchNorm2d(base_channels * 2),
                 nn.ReLU(inplace=True)
             ),
             'bottleneck': nn.Sequential(
                 nn.Conv2d(base_channels * 16, base_channels * 4, 1),
+                nn.BatchNorm2d(base_channels * 4),
                 nn.ReLU(inplace=True)
             )
         })
@@ -177,6 +186,8 @@ class PromptGuidedBlock(nn.Module):
         self.channel_attention = ChannelAttention(in_channels)
         self.spatial_attention = SpatialAttention()
         
+        # 注意力后的归一化层
+        self.post_attention_bn = nn.BatchNorm2d(in_channels)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x, prompt, gradient_map):
@@ -202,6 +213,10 @@ class PromptGuidedBlock(nn.Module):
         # 应用注意力机制
         fused_feat = self.channel_attention(fused_feat)
         fused_feat = self.spatial_attention(fused_feat)
+        
+        # 在注意力机制后添加额外的归一化和激活
+        fused_feat = self.post_attention_bn(fused_feat)
+        fused_feat = self.relu(fused_feat)
         
         return fused_feat
 
