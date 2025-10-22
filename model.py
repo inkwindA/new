@@ -179,7 +179,7 @@ class PromptGuidedBlock(nn.Module):
         
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x, prompt, gradient_map=None):
+    def forward(self, x, prompt, gradient_map):
         # 主特征处理
         main_feat = self.main_conv(x)
         
@@ -188,19 +188,16 @@ class PromptGuidedBlock(nn.Module):
         prompt_feat = self.prompt_bn(prompt_feat)
         prompt_feat = self.relu(prompt_feat)
         
-        # 梯度特征融合（如果提供了梯度图）
-        if gradient_map is not None:
-            # 调整梯度图尺寸以匹配当前特征图
-            if gradient_map.size()[-2:] != x.size()[-2:]:
-                gradient_map = F.interpolate(gradient_map, size=x.size()[-2:], mode='bilinear', align_corners=True)
-            gradient_feat = self.gradient_conv(gradient_map)
-            gradient_feat = self.gradient_bn(gradient_feat)
-            gradient_feat = self.relu(gradient_feat)
-            # 将梯度特征与主特征和提示特征相加
-            fused_feat = main_feat + prompt_feat + gradient_feat
-        else:
-            # 如果没有梯度图，只融合提示特征
-            fused_feat = main_feat + prompt_feat
+        # 梯度特征融合 - 必须融合
+        # 调整梯度图尺寸以匹配当前特征图
+        if gradient_map.size()[-2:] != x.size()[-2:]:
+            gradient_map = F.interpolate(gradient_map, size=x.size()[-2:], mode='bilinear', align_corners=True)
+        gradient_feat = self.gradient_conv(gradient_map)
+        gradient_feat = self.gradient_bn(gradient_feat)
+        gradient_feat = self.relu(gradient_feat)
+        
+        # 将梯度特征与主特征和提示特征相加
+        fused_feat = main_feat + prompt_feat + gradient_feat
         
         # 应用注意力机制
         fused_feat = self.channel_attention(fused_feat)
