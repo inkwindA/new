@@ -5,5 +5,7 @@ __pycache__/
 checkpoint/
 dataset/
 save/
+wandb/
+logs/
 
 
