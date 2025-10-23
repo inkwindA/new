@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn.utils as nn_utils
 import argparse
-from model import MultiFrameCTDenoiser
+from newmodel import ImageGenerator
 import train_dataset
 import math
 from matplotlib import pyplot
@@ -12,15 +12,15 @@ arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument('--dataset_path', type=str, default='dataset\L333')
 arg_parser.add_argument('--checkpoint_path', type=str, default='checkpoint')
 arg_parser.add_argument('--n_epochs', type=int, default=200)
-arg_parser.add_argument('--batch_size', type=int, default=1)
+arg_parser.add_argument('--batch_size', type=int, default=3)
 arg_parser.add_argument('--threads', type=int, default=0)
 arg_parser.add_argument("--warmup", type=int, default=100)
-arg_parser.add_argument("--init_lr", type=float, default=1e-6)
-arg_parser.add_argument("--final_lr", type=float, default=1e-6)
+arg_parser.add_argument("--init_lr", type=float, default=1e-5)
+arg_parser.add_argument("--final_lr", type=float, default=1e-5)
 arg_parser.add_argument("--cos_lr", type=bool, default=True)
 arg_parser.add_argument('--b1', type=float, default=0.99)
 arg_parser.add_argument('--b2', type=float, default=0.999)
-arg_parser.add_argument('--clip_grad', type=float, default=0,  
+arg_parser.add_argument('--clip_grad', type=float, default=2.0,  
                         help='梯度裁剪阈值，设为0或None表示不裁剪')
 args = arg_parser.parse_args()
 print(args)
@@ -38,7 +38,7 @@ train_data_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                 shuffle=True,
                                                 )
 
-model = MultiFrameCTDenoiser(num_frames=3, in_channels=1, out_channels=1, base_channels=64).to(device)
+model = ImageGenerator(inp_channels=3, out_channels=1, dim=16, num_frames=3).to(device)
 print('model parameter size=' + str(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
 optimizer = torch.optim.Adam(model.parameters(), lr=args.init_lr, betas=(args.b1, args.b2))
@@ -73,7 +73,7 @@ for epoch in range(args.n_epochs):
         pixel_lamda = 100
 
         # 直接使用数据集提供的多帧输入
-        pred = model(ldct) #1
+        grad, cleargrad, pred = model(ldct) # 新模型返回三个值，我们只需要pred
         pixel_loss = loss_function(pred, ndct)
         loss = pixel_lamda * (pixel_loss)
 

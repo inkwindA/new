@@ -3,7 +3,7 @@ import psnr
 import torch
 import shutil
 import argparse
-from model import MultiFrameCTDenoiser
+from newmodel import ImageGenerator
 import test_dataset
 import matplotlib.pyplot
 
@@ -13,7 +13,7 @@ arg_parser.add_argument('--checkpoint_path', type=str, default='checkpoint')
 # arg_parser.add_argument('--checkpoint', type=int, default=140)
 arg_parser.add_argument('--save_path', type=str, default='save/fig')
 arg_parser.add_argument('--start_checkpoint', type=int, default=0)
-arg_parser.add_argument('--end_checkpoint', type=int, default=20)
+arg_parser.add_argument('--end_checkpoint', type=int, default=199)
 arg_parser.add_argument('--precision_path', type=str, default='save/precision')
 arg_parser.add_argument('--batch_size', type=int, default=1)
 
@@ -78,7 +78,7 @@ test_data_loader = torch.utils.data.DataLoader(
     batch_size=args.batch_size,
     shuffle=False)
 
-model = MultiFrameCTDenoiser(num_frames=3, in_channels=1, out_channels=1, base_channels=64)
+model = ImageGenerator(inp_channels=3, out_channels=1, dim=16, num_frames=3)
 model.to(device)
 
 
@@ -91,7 +91,7 @@ with torch.no_grad():
                 ldct = torch.autograd.Variable(ldct).cuda()
                 ndct = torch.autograd.Variable(ndct).cuda()
 
-                pred = model(ldct)
+                grad, cleargrad, pred = model(ldct)
 
                 # 只取当前帧（中间帧）进行可视化
                 current_ldct = ldct[:, 1:2, :, :]  # 取中间帧
